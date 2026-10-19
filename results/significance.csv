@@ -1,0 +1,17 @@
+metric,comparison,tests,mean_diff_points,A_better_in,p_paired,p_corrected
+accuracy,CNB vs MNB (paper),"complement, alpha = 1",4.72,10/10 splits,0.0,0.0
+accuracy,CNB vs MNB (tuned),"complement, tuned alpha",1.17,10/10 splits,0.0001,0.0057
+accuracy,WCNB vs CNB (paper),"weight normalisation, raw counts",-2.24,0/10 splits,0.0,0.0
+accuracy,TWCNB vs TCNB (paper),"weight normalisation, transformed",-0.25,0/10 splits,0.0,0.0
+accuracy,T-MNB vs MNB (tuned),"transforms, tuned alpha",2.83,10/10 splits,0.0,0.0
+accuracy,TCNB vs T-MNB (tuned),"complement on top of transforms, tuned",-0.57,0/10 splits,0.0005,0.021
+accuracy,LinearSVC vs TWCNB (paper),SVM vs the paper's model,2.86,10/10 splits,0.0,0.0
+accuracy,LinearSVC vs T-MNB (tuned),SVM vs the best tuned Naive Bayes,1.9,10/10 splits,0.0,0.0
+macro_f1,CNB vs MNB (paper),"complement, alpha = 1",5.81,10/10 splits,0.0,0.0
+macro_f1,CNB vs MNB (tuned),"complement, tuned alpha",1.16,10/10 splits,0.0003,0.0155
+macro_f1,WCNB vs CNB (paper),"weight normalisation, raw counts",-2.84,0/10 splits,0.0,0.0
+macro_f1,TWCNB vs TCNB (paper),"weight normalisation, transformed",-0.3,0/10 splits,0.0,0.0
+macro_f1,T-MNB vs MNB (tuned),"transforms, tuned alpha",3.11,10/10 splits,0.0,0.0
+macro_f1,TCNB vs T-MNB (tuned),"complement on top of transforms, tuned",-0.78,0/10 splits,0.0001,0.0055
+macro_f1,LinearSVC vs TWCNB (paper),SVM vs the paper's model,3.41,10/10 splits,0.0,0.0
+macro_f1,LinearSVC vs T-MNB (tuned),SVM vs the best tuned Naive Bayes,1.98,10/10 splits,0.0,0.0
