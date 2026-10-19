@@ -4,7 +4,7 @@ A from-scratch reimplementation and re-evaluation of Rennie et al. (2003),
 *Tackling the Poor Assumptions of Naive Bayes Text Classifiers* (ICML).
 Course project, AI & Machine Learning, Digital University Kerala.
 
-**Team:** [Name 1], [Name 2] · **Blog:** [link] · **Report:** [link]
+**Team:** Adhil Rifayin K S, Suryakanth T S · **Blog:** [link] · **Report:** [link]
 
 ## What we did
 We built the paper's classifier one correction at a time (MNB → CNB → WCNB →
