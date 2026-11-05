@@ -1,8 +1,8 @@
 """
-Extended smoothing grid. In the final run, MNB always chose the smallest alpha
-tried (0.003) and WCNB always the largest (1), so their best values may lie
-outside the grid. This re-tunes every Naive Bayes variant on the original and a
-wider grid over the same 10 random 20 Newsgroups splits. No SVM, so it is quick.
+Extended smoothing grid. In the final run, MNB chose the smallest alpha tried
+(0.003) and WCNB the largest (1), so their best values may lie outside the grid. This re-tunes every Naive Bayes variant on the original and a
+wider grid over the same 10 random 20 Newsgroups splits, with the same
+cross-validated tuning as src.experiments. No SVM, so it is quick.
 Run from the repository root:  python -m src.grid_check
 """
 import argparse
@@ -30,9 +30,10 @@ def main():
         X_tr, X_te = vectorize(tr_text, te_text)
         for name in VARIANTS:
             for grid_name, grid in [("original", ALPHAS), ("wide", WIDE_ALPHAS)]:
-                a = pick_best(lambda v: make_variant(name, alpha=v), grid, X_tr, y_tr, split)
+                a = pick_best(lambda v: make_variant(name, alpha=v), grid, X_tr, y_tr, split,
+                              metric="accuracy")
                 rows.append({"split": split, "model": name, "grid": grid_name, "alpha": a,
-                             **score(make_variant(name, alpha=a), X_tr, y_tr, X_te, y_te)})
+                             **score(make_variant(name, alpha=a), X_tr, y_tr, X_te, y_te)[0]})
         print(f"split {split + 1}/{args.n_splits} done")
 
     RESULTS.mkdir(exist_ok=True)

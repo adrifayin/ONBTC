@@ -3,8 +3,11 @@ Original experiment: how does each variant cope as the training data gets skewed
 
 Half of the 20 Newsgroups classes (chosen at random) are shrunk to a fraction of
 their training documents. The test set is left untouched, so it stays balanced.
-MNB with alpha = 0.01 is included to test whether light smoothing resists
-imbalance as well as the complement correction does.
+
+Every variant is run under both protocols, so no model gets an unfair smoothing advantage:
+  paper : alpha = 1
+  tuned : alpha chosen by 3-fold cross-validation (macro-F1) on the skewed training
+          data itself, as a practitioner facing that data would do.
 Run from the repository root:  python -m src.imbalance
 """
 import argparse
@@ -16,23 +19,17 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import accuracy_score, f1_score, recall_score
 
 from src.data import load_20ng
-from src.twcnb import make_variant
+from src.experiments import ALPHAS, pick_best
+from src.twcnb import VARIANTS, make_variant
 
 FRACTIONS = [1.0, 0.5, 0.2, 0.1, 0.05]
-MODELS = [                       # (label, variant, alpha)
-    ("MNB", "MNB", 1.0),
-    ("MNB a=0.01", "MNB", 0.01),
-    ("CNB", "CNB", 1.0),
-    ("WCNB", "WCNB", 1.0),
-    ("TWCNB", "TWCNB", 1.0),
-]
 RESULTS = Path("results")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--seeds", type=int, default=3)
+    parser.add_argument("--seeds", type=int, default=5)
     args = parser.parse_args()
 
     train_texts, test_texts, y_train_all, y_test = load_20ng("bydate")
@@ -57,25 +54,35 @@ def main():
             X_test = vectorizer.transform(test_texts)
             y_train = y_train_all[keep]
 
-            for label, variant, alpha in MODELS:
-                pred = make_variant(variant, alpha=alpha).fit(X_train, y_train).predict(X_test)
-                rows.append({
-                    "seed": seed, "fraction": frac, "model": label,
-                    "accuracy": accuracy_score(y_test, pred),
-                    "macro_f1": f1_score(y_test, pred, average="macro", zero_division=0),
-                    "shrunk_class_recall": recall_score(y_test, pred, labels=shrunk,
-                                                        average="macro", zero_division=0),
-                })
-            print(f"seed {seed}, fraction {frac:.2f}: done")
+            for variant in VARIANTS:
+                tuned = pick_best(lambda v: make_variant(variant, alpha=v), ALPHAS,
+                                  X_train, y_train, seed, metric="macro_f1")
+                for protocol, alpha in [("paper", 1.0), ("tuned", tuned)]:
+                    pred = make_variant(variant, alpha=alpha).fit(X_train, y_train).predict(X_test)
+                    rows.append({
+                        "seed": seed, "fraction": frac, "model": variant,
+                        "protocol": protocol, "alpha": alpha,
+                        "accuracy": accuracy_score(y_test, pred),
+                        "macro_f1": f1_score(y_test, pred, average="macro", zero_division=0),
+                        "shrunk_class_recall": recall_score(y_test, pred, labels=shrunk,
+                                                            average="macro", zero_division=0),
+                    })
+            print(f"seed {seed}, fraction {frac:.2f}: done", flush=True)
 
     RESULTS.mkdir(exist_ok=True)
     df = pd.DataFrame(rows)
     df.to_csv(RESULTS / "imbalance.csv", index=False)
-    labels = [m[0] for m in MODELS]
-    for metric in ["macro_f1", "shrunk_class_recall"]:
-        table = df.pivot_table(index="fraction", columns="model", values=metric, aggfunc="mean")
-        print(f"\nMean {metric} by fraction of shrunk-class training documents kept:")
-        print(table.sort_index(ascending=False)[labels].round(4).to_string())
+    labels = list(VARIANTS)
+    for protocol in ["paper", "tuned"]:
+        sub = df[df["protocol"] == protocol]
+        for metric in ["macro_f1", "shrunk_class_recall"]:
+            table = sub.pivot_table(index="fraction", columns="model", values=metric, aggfunc="mean")
+            print(f"\n[{protocol}] mean {metric} by fraction of shrunk-class documents kept:")
+            print(table.sort_index(ascending=False)[labels].round(4).to_string())
+    print("\n[tuned] alpha chosen (most common) by fraction:")
+    print(df[df["protocol"] == "tuned"].pivot_table(
+        index="fraction", columns="model", values="alpha",
+        aggfunc=lambda s: s.mode().iloc[0]).sort_index(ascending=False)[labels].to_string())
 
 
 if __name__ == "__main__":

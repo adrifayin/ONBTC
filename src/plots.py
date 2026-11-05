@@ -46,7 +46,7 @@ def timing_figure(df):
     for i, t in enumerate(times):
         ax.text(i, t, f"{t:.2f}s", ha="center", va="bottom", fontsize=9)
     ax.set_ylabel("Training time (s, log scale)")
-    ax.set_title("Training time on 20 Newsgroups (mean of 10 splits)")
+    ax.set_title("Training time on 20 Newsgroups, alpha = 1 / C = 10 (mean of 10 splits)")
     plt.setp(ax.get_xticklabels(), rotation=20)
     fig.tight_layout()
     fig.savefig(FIGURES / "training_time.png", dpi=200)
@@ -54,25 +54,32 @@ def timing_figure(df):
 
 
 def imbalance_figure(df):
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
-    panels = [(axes[0], "macro_f1", "Macro-F1 (all classes)"),
-              (axes[1], "shrunk_class_recall", "Mean recall on shrunk classes")]
+    """Rows: metric. Columns: alpha = 1 (paper) and alpha tuned on the skewed data."""
+    fig, axes = plt.subplots(2, 2, figsize=(11, 8), sharey="row")
+    metrics = [("macro_f1", "Macro-F1 (all classes)"),
+               ("shrunk_class_recall", "Mean recall on shrunk classes")]
+    protocols = [("paper", "alpha = 1"), ("tuned", "alpha tuned by CV")]
     fractions = sorted(df["fraction"].unique(), reverse=True)
-    for ax, metric, title in panels:
-        for model in df["model"].unique():
-            curve = df[df["model"] == model].groupby("fraction")[metric].agg(["mean", "std"])
-            ax.errorbar(curve.index, curve["mean"], yerr=curve["std"].fillna(0),
-                        marker="o", capsize=3, label=model)
-        ax.set_xscale("log")
-        ax.minorticks_off()
-        ax.set_xticks(fractions)
-        ax.set_xticklabels([f"{int(f * 100)}%" for f in fractions])
-        ax.invert_xaxis()                  # more imbalance further to the right
-        ax.set_xlabel("Training documents kept for shrunk classes")
-        ax.set_title(title)
-        ax.grid(alpha=0.3)
-    axes[0].set_ylabel("Score")
-    axes[0].legend()
+    models = [m for m in ORDER if m in set(df["model"])]
+    for r, (metric, metric_title) in enumerate(metrics):
+        for c, (protocol, protocol_title) in enumerate(protocols):
+            ax = axes[r, c]
+            sub = df[df["protocol"] == protocol]
+            for model in models:
+                curve = sub[sub["model"] == model].groupby("fraction")[metric].agg(["mean", "std"])
+                ax.errorbar(curve.index, curve["mean"], yerr=curve["std"].fillna(0),
+                            marker="o", capsize=3, label=model)
+            ax.set_xscale("log")
+            ax.minorticks_off()
+            ax.set_xticks(fractions)
+            ax.set_xticklabels([f"{int(f * 100)}%" for f in fractions])
+            ax.invert_xaxis()              # more imbalance further to the right
+            ax.set_title(f"{metric_title}, {protocol_title}")
+            ax.grid(alpha=0.3)
+            if r == 1:
+                ax.set_xlabel("Training documents kept for shrunk classes")
+        axes[r, 0].set_ylabel("Score")
+    axes[0, 0].legend()
     fig.tight_layout()
     fig.savefig(FIGURES / "imbalance.png", dpi=200)
     plt.close(fig)
